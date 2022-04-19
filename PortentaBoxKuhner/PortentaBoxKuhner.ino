@@ -43,7 +43,7 @@ void setup()
 	Serial.begin(baud);
   digitalWrite(LEDG,LON);
 	// Set pinMode to OUTPUT
-
+  while(!Serial);
   Serial.println("Initialize the pcf8575");
   pcf8575.begin();
 	pcf8575.pinMode(P0,OUTPUT);
