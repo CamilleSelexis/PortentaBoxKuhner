@@ -24,9 +24,9 @@ const int LOFF = HIGH;
 const int baud = 115200;
 
  //Ethernet related ---------------------
-byte mac[] = {0xDE, 0xA1, 0x00, 0x73, 0x24, 0x12};  //Mac adress
+byte mac[] = {0xDE, 0x03, 0x33, 0x13, 0x59, 0x99};  //Mac adress
 
-IPAddress ip(10,0,16,10);   //Adresse IP
+IPAddress ip(10,0,16,11);   //Adresse IP
 
 EthernetServer server = EthernetServer(52);  // (port 80 is default for HTTP) 52 is the number of the lab
 // Uses default I2C pins -> SDA     SCL
@@ -40,13 +40,13 @@ PCF8575 pcf8575(0x20);
 
 void setup()
 {
-	Serial.begin(baud);
+  Serial.begin(baud);
   digitalWrite(LEDG,LON);
-	// Set pinMode to OUTPUT
+  // Set pinMode to OUTPUT
   while(!Serial);
   Serial.println("Initialize the pcf8575");
   pcf8575.begin();
-	pcf8575.pinMode(P0,OUTPUT);
+  pcf8575.pinMode(P0,OUTPUT);
   pcf8575.pinMode(P1,OUTPUT);
   pcf8575.pinMode(P2,OUTPUT);
   pcf8575.pinMode(P3,OUTPUT);
@@ -82,7 +82,7 @@ void setup()
 
 
 // Start the server
-  server.begin();           //"server" is the name of the object for comunication through ethernet
+  server.begin();           //"s33+-+----------------erver" is the name of the object for comunication through ethernet
   Serial.print("Ethernet server connected. Server is at ");
   Serial.println(Ethernet.localIP());         //Gives the local IP through serial com
   digitalWrite(LEDB,LON);
@@ -93,6 +93,7 @@ void loop()
    // listen for incoming clients
   EthernetClient client = server.available();
   if (client) {
+    Serial.println("Received a request from a client");
     // an http request ends with a blank line
     String currentLine = "";
     while (client.connected()) {
@@ -110,51 +111,58 @@ void loop()
           Magnet0;
           Serial.println("received Magnet 0 Command");
         }
-        if(currentLine.endsWith("Magnet1")){
+        else if(currentLine.endsWith("Magnet1")){
           Magnet1;
+          Serial.println("received Magnet 1 Command");          
         }
-        if(currentLine.endsWith("Magnet2")){
+        else if(currentLine.endsWith("Magnet2")){
           Magnet2;
+          Serial.println("received Magnet 2 Command");
         }
-        if(currentLine.endsWith("Magnet3")){
+        else if(currentLine.endsWith("Magnet3")){
           Magnet3;
+          Serial.println("received Magnet 3 Command");
         }
-        if(currentLine.endsWith("Magnet4")){
+        else if(currentLine.endsWith("Magnet4")){
           Magnet4;
+          Serial.println("received Magnet 4 Command");
         }
-        if(currentLine.endsWith("Magnet5")){
+        else if(currentLine.endsWith("Magnet5")){
           Magnet5;
+          Serial.println("received Magnet 5 Command");
         }
-        if(currentLine.endsWith("Magnet6")){
+        else if(currentLine.endsWith("Magnet6")){
           Magnet6;
+          Serial.println("received Magnet 6 Command");
         }   
-        if(currentLine.endsWith("Magnet7")){
+        else if(currentLine.endsWith("Magnet7")){
           Magnet7;
-        }            
+          Serial.println("received Magnet 7 Command");
+        }        
       } 
     }     
     client.stop(); 
   } 
   //Serial.println("High");
-	pcf8575.digitalWrite(P0,HIGH);
-  pcf8575.digitalWrite(P1,HIGH);
-  pcf8575.digitalWrite(P2,HIGH);
-  pcf8575.digitalWrite(P3,HIGH);
-  pcf8575.digitalWrite(P4,HIGH);
-  pcf8575.digitalWrite(P5,HIGH);
-  pcf8575.digitalWrite(P6,HIGH);
-  pcf8575.digitalWrite(P7,HIGH);
-  delay(100);
-  delay(5000);
-  //Serial.println("Low");
-  pcf8575.digitalWrite(P0,LOW);
-  pcf8575.digitalWrite(P1,LOW);
-  pcf8575.digitalWrite(P2,LOW);
-  pcf8575.digitalWrite(P3,LOW);
-  pcf8575.digitalWrite(P4,LOW);
-  pcf8575.digitalWrite(P5,LOW);
-  pcf8575.digitalWrite(P6,LOW);
-  pcf8575.digitalWrite(P7,LOW);
-  delay(100);
-	delay(5000);
+//  pcf8575.digitalWrite(P0,HIGH);
+//  pcf8575.digitalWrite(P1,HIGH);
+//  pcf8575.digitalWrite(P2,HIGH);
+//  pcf8575.digitalWrite(P3,HIGH);
+//  pcf8575.digitalWrite(P4,HIGH);
+//  pcf8575.digitalWrite(P5,HIGH);
+//  pcf8575.digitalWrite(P6,HIGH);
+//  pcf8575.digitalWrite(P7,HIGH);
+//  delay(100);
+//  delay(5000);
+//  //Serial.println("Low");
+//  pcf8575.digitalWrite(P0,LOW);
+//  pcf8575.digitalWrite(P1,LOW);
+//  pcf8575.digitalWrite(P2,LOW);
+//  pcf8575.digitalWrite(P3,LOW);
+//  pcf8575.digitalWrite(P4,LOW);
+//  pcf8575.digitalWrite(P5,LOW);
+//  pcf8575.digitalWrite(P6,LOW);
+//  pcf8575.digitalWrite(P7,LOW);
+//  delay(100);
+//  delay(5000);
 }
