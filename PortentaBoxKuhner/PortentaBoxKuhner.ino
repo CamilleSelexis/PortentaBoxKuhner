@@ -20,14 +20,7 @@ using namespace rtos;
 
 #define DEBUG 0
 #define RST_PIN 13 //reset Pin for the portenta
-#define Magnet0 pcf8575.pinMode(P0,OUTPUT);pcf8575.digitalWrite(P0,HIGH);delay(5000);pcf8575.digitalWrite(P0,LOW);
-#define Magnet1 pcf8575.pinMode(P1,OUTPUT);pcf8575.digitalWrite(P1,HIGH);delay(5000);pcf8575.digitalWrite(P1,LOW);
-#define Magnet2 pcf8575.pinMode(P2,OUTPUT);pcf8575.digitalWrite(P2,HIGH);delay(5000);pcf8575.digitalWrite(P2,LOW);
-#define Magnet3 pcf8575.pinMode(P3,OUTPUT);pcf8575.digitalWrite(P3,HIGH);delay(5000);pcf8575.digitalWrite(P3,LOW);
-#define Magnet4 pcf8575.pinMode(P4,OUTPUT);pcf8575.digitalWrite(P4,HIGH);delay(5000);pcf8575.digitalWrite(P4,LOW);
-#define Magnet5 pcf8575.pinMode(P5,OUTPUT);pcf8575.digitalWrite(P5,HIGH);delay(5000);pcf8575.digitalWrite(P5,LOW);
-#define Magnet6 pcf8575.pinMode(P6,OUTPUT);pcf8575.digitalWrite(P6,HIGH);delay(5000);pcf8575.digitalWrite(P6,LOW);
-#define Magnet7 pcf8575.pinMode(P7,OUTPUT);pcf8575.digitalWrite(P7,HIGH);delay(5000);pcf8575.digitalWrite(P7,LOW);
+
 
 volatile bool toggle0 = true;
 volatile bool toggle1 = true;
@@ -69,7 +62,7 @@ MFRC522_I2C mfrc522[40] = { // Create the structure for up to 40 rfid chips
   MFRC522_I2C(0x00,RST_PIN),
   MFRC522_I2C(0x00,RST_PIN),
   MFRC522_I2C(0x00,RST_PIN),
-  MFRC522_I2C(0x00,RST_PIN),
+  MFRC522_I2C(0x00,RST_PIN), 
   MFRC522_I2C(0x00,RST_PIN),
   MFRC522_I2C(0x00,RST_PIN),
   MFRC522_I2C(0x00,RST_PIN),
@@ -117,6 +110,7 @@ void setup()
   digitalWrite(RST_PIN,LOW);
   delay(100);
   digitalWrite(RST_PIN,HIGH);
+  //--------------------------I2C BUS INITIALIZATION-----------------------------------------------
   Wire.begin();//Start the I2C communications;
   int nDevices;
   nDevices = scan_i2c(addresses);
@@ -141,11 +135,12 @@ void setup()
       rfid  = true;
     }
   }
+  //----------------------ETHERNET INITIALIZATION------------------------------------------------
   Serial.println("Initialize the ethernet connection");
   //Ethernet setup
   Ethernet.begin(mac,ip);  //Start the Ethernet coms
 
-// Check for Ethernet hardware present
+  // Check for Ethernet hardware present
   if (Ethernet.hardwareStatus() == EthernetNoHardware) {
     Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
     while (true) {
@@ -158,18 +153,21 @@ void setup()
   }
 
 
-// Start the server
-  server.begin();           //"s33+-+----------------erver" is the name of the object for comunication through ethernet
+  // Start the server
+  server.begin();           //"server" is the name of the object for comunication through ethernet
   Serial.print("Ethernet server connected. Server is at ");
   Serial.println(Ethernet.localIP());         //Gives the local IP through serial com
   digitalWrite(LEDB,LON);
+
+  
   init_timers(); //Init the timers 0 and 1 with 5000 ms intervals
 }
 
 void loop()
 {
   digitalWrite(LEDG,HIGH);
-  if(!toggle0) disable_SSR(0);
+  //Check that toggle0 and toggle1 are enabled to desactivate the corresponding SSRs
+  if(!toggle0) disable_SSR(0); 
   if(!toggle1) disable_SSR(4);
    // listen for incoming clients
   EthernetClient client = server.available();
@@ -290,4 +288,5 @@ void loop()
     client.stop(); 
   }
   digitalWrite(LEDG,LOW);
+  delay(50);
 }
