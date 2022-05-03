@@ -20,3 +20,34 @@ void init_pcf8575(int adr){
   pcf8575.digitalWrite(P6,HIGH);
   pcf8575.digitalWrite(P7,HIGH);
 }
+//Enable the magnet on the given row - row 0 is on the left
+bool enable_SSR(byte row){
+  pcf8575.pinMode(row,OUTPUT);
+  pcf8575.digitalWrite(row,HIGH);
+  if(row<4){  //Use Timer0 for row 0-1-2-3
+    toggle0 = true;
+    ITimer0.restartTimer();
+  }           // Use Timer1 for rows 4-5-6-7
+  else {
+    toggle1 = true;
+    ITimer1.restartTimer();
+  }
+}
+
+//rows is 0 or 4
+void disable_SSR(byte rows){
+  //Stop the timer and reset the bool varaible
+  if(!rows){   
+    ITimer0.stopTimer();
+    toggle0 = true;
+  }
+  else {
+    ITimer1.stopTimer();
+    toggle1 = true;
+  }
+  //DIsable the SSR
+  for (int i = 0; i<4; i++){
+    //pcf8575.pinMode(rows+i,OUTPUT);
+    pcf8575.digitalWrite(rows+i,LOW);
+  }
+}
