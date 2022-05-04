@@ -8,6 +8,12 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
     }
 }
 
+void dump_byte_array_eth(byte *buffer, byte bufferSize) {
+    for (byte i = 0; i < bufferSize; i++) {
+        server.print(buffer[i] < 0x10 ? " 0" : " ");
+        server.print(buffer[i], HEX);
+    } 
+}
 void ShowReaderDetails(int cc) {
   // Get the mfrc522[ac][ac] software version
   byte v = mfrc522[cc].PCD_ReadRegister(mfrc522[cc].VersionReg);

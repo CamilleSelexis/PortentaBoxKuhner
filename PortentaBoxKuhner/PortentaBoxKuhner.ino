@@ -21,7 +21,6 @@ using namespace rtos;
 #define DEBUG 0
 #define RST_PIN 13 //reset Pin for the portenta
 
-
 volatile bool toggle0 = true;
 volatile bool toggle1 = true;
 
@@ -114,6 +113,7 @@ void setup()
   Wire.begin();//Start the I2C communications;
   int nDevices;
   nDevices = scan_i2c(addresses);
+  Serial.print("nDevices = ");Serial.println(nDevices);
   //MFRC522_I2C mfrc522[nDevices] = {0}; //Create the array to contain the instances of MFRC522
   for(int i = 0; i<nDevices; i++){ //Create instances of pcf and rfid depending on what was found on i2c bus
     if(addresses[i] == adr_pcf){
@@ -167,16 +167,15 @@ void loop()
 {
   digitalWrite(LEDG,HIGH);
   //Check that toggle0 and toggle1 are enabled to desactivate the corresponding SSRs
-  if(!toggle0) disable_SSR(0); 
+  if(!toggle0) disable_SSR(0);
   if(!toggle1) disable_SSR(4);
    // listen for incoming clients
   EthernetClient client = server.available();
-  if (client) {
-    // an http request ends with a blank line
+  if (client) { //If a client is present connect to it
     while (client.connected()) {
       if(client.available()){
         byte data = client.read(); //read first byte of data
-        
+        //If it starts with 0x00 then it is for the PCF8575 if it starts with 0xFF it is for a MFRC522 chip
         if(data == 0X00){
           //Command for the PCF8575
           if(pcf){//Check that a pcf8575 is connected
@@ -198,8 +197,8 @@ void loop()
             if(data<nRFID){
               cc = data; //Select the correct chip
               Serial.print("Chip ");Serial.print(cc);Serial.println("selected");
-              mfrc522[cc].PCD_WriteRegister(CommandReg,0x00);//Clear the Soft PowerDown
-              delay(50);//Wait for the
+              mfrc522[cc].PCD_WriteRegister(0x01,0x00);//Clear the Soft PowerDown in the command Reg -> Make the chip exit power down mode
+              delay(50);//Wait for the chip to wake up
                 if (mfrc522[cc].PICC_IsNewCardPresent()&&mfrc522[cc].PICC_ReadCardSerial()) {
                   server.print("RFID tag found");
                   // Dump UID
@@ -207,6 +206,8 @@ void loop()
                   for (byte i = 0; i < mfrc522[cc].uid.size; i++) {
                     Serial.print(mfrc522[cc].uid.uidByte[i] < 0x10 ? " 0" : " ");
                     Serial.print(mfrc522[cc].uid.uidByte[i], HEX);
+                    server.print(mfrc522[cc].uid.uidByte[i] < 0x10 ? " 0" : " ");
+                    server.print(mfrc522[cc].uid.uidByte[i], HEX);
                   } 
                   Serial.println();
                   // Show the whole sector as it currently is
@@ -228,6 +229,7 @@ void loop()
                         dataBlock[i] = client.read();
                       }
                       dump_byte_array(dataBlock, 4); Serial.println();
+                      dump_byte_array_eth(buffer,4);
                       status = (MFRC522_I2C::StatusCode) mfrc522[cc].MIFARE_Ultralight_Write(pageAddr, dataBlock, 4);
                       if (status != MFRC522_I2C::STATUS_OK) {
                           Serial.print(F("MIFARE_Write() failed: "));
@@ -245,25 +247,18 @@ void loop()
                       }
                       Serial.print(F("Data in page ")); Serial.print(pageAddr); Serial.println(F(":"));
                       dump_byte_array(buffer, 4); Serial.println();
-                  
+                      dump_byte_array_eth(buffer,4);
                       // Check that data in block is what we have written
                       // by counting the number of bytes that are equal
-                      //Serial.println(F("Checking result..."));
                       byte count = 0;
                       for (byte i = 0; i < 4; i++) {
                           // Compare buffer (= what we've read) with dataBlock (= what we've written)
                           if (buffer[i] == dataBlock[i])
                               count++;
                       }
-                      //Serial.print(F("Number of bytes that match = ")); Serial.println(count);
                       if (count == 4) {
-                          //Serial.println(F("Success :-)"));
                           success++;
-                      } else {
-                          //Serial.println(F("Failure, no match :-("));
-                          //Serial.println(F("  perhaps the write didn't work properly..."));
                       }
-                      //Serial.println();
                     }
                     if(success == 3){
                       Serial.println("Tag successfully updated");
@@ -274,7 +269,7 @@ void loop()
                     }
                   }
                   mfrc522[cc].PCD_StopCrypto1();
-                  mfrc522[cc].PCD_WriteRegister(CommandReg,0x10);//Soft Power Down
+                  mfrc522[cc].PCD_WriteRegister(0x01,0x10);//Soft Power Down
                 }
                 else{Serial.println("No tag found");}
             }
@@ -287,6 +282,7 @@ void loop()
     }     
     client.stop(); 
   }
+  server.print("I am alive and well");
   digitalWrite(LEDG,LOW);
   delay(50);
 }
