@@ -103,7 +103,7 @@ EthernetServer server = EthernetServer(52);  // (port 80 is default for HTTP) 52
 void setup()
 {
   Serial.begin(baud);
-  while(!Serial); //Wait for the user to open the serial terminal
+  while(!Serial);//Wait for the user to open the serial terminal
   digitalWrite(LEDG,LON);
   pinMode(RST_PIN,OUTPUT);
   digitalWrite(RST_PIN,LOW);
@@ -165,57 +165,64 @@ void setup()
 
 void loop()
 {
-  digitalWrite(LEDG,HIGH);
+  digitalWrite(LEDB,HIGH);
   //Check that toggle0 and toggle1 are enabled to desactivate the corresponding SSRs
   if(!toggle0) disable_SSR(0);
   if(!toggle1) disable_SSR(4);
    // listen for incoming clients
   EthernetClient client = server.available();
-  if (client) { //If a client is present connect to it
-    while (client.connected()) {
-      if(client.available()){
-        byte data = client.read(); //read first byte of data
-        //If it starts with 0x00 then it is for the PCF8575 if it starts with 0xFF it is for a MFRC522 chip
+  if (client) { //Check that server.available returned a client
+    while (client.connected()) { //Stay in the loop for as long as the client wants
+      if(client.available()){ //Returns true if there is still data to read
+        byte data = client.read(); //read the first byte of data -> should be 0x00 or 0xff
         if(data == 0X00){
           //Command for the PCF8575
-          if(pcf){//Check that a pcf8575 is connected
+          if(pcf){//Check that a pcf8575 is connected to the I2C bus
             data = client.read();
-            Serial.print("Received data : ");Serial.println(data,HEX);
+            Serial.print("Received data : ");Serial.println(data,HEX); 
             enable_SSR(data);
-            server.print("Enabled the SSR ");server.print(data);
+            client.print("Enabled the SSR ");client.println(data);
+            client.flush();
           }
           else{
-            server.print("No PCF connected");
+            client.println("No PCF connected");
+            client.flush();
           }
         }
         else if(data == 0xFF){
           //Command for the RFID
-          //0x FF chip# R/W msg
           Serial.println("RFID instr. received.");
           if(rfid){//Check that a mfrc522 chip is connected
-            data = client.read();
-            if(data<nRFID){
-              cc = data; //Select the correct chip
-              Serial.print("Chip ");Serial.print(cc);Serial.println("selected");
+            cc = client.read(); //Read second byte -> choose the mfrc522 chip (Starts at 0)
+            if(cc<nRFID){ //Check that the chip selected is in range
+              Serial.print("Chip ");Serial.print(cc);Serial.println(" selected");
+              client.print("I2C address of selected chip"); client.println(mfrc522[cc].PCD_getAddress());
+              client.flush();
               mfrc522[cc].PCD_WriteRegister(0x01,0x00);//Clear the Soft PowerDown in the command Reg -> Make the chip exit power down mode
               delay(50);//Wait for the chip to wake up
-                if (mfrc522[cc].PICC_IsNewCardPresent()&&mfrc522[cc].PICC_ReadCardSerial()) {
-                  server.print("RFID tag found");
-                  // Dump UID
+                if (mfrc522[cc].PICC_IsNewCardPresent()&&mfrc522[cc].PICC_ReadCardSerial()) { //Continue if a tag can be read by the reader
+                  // Prin t the card uid in
                   Serial.print(F("Card UID:"));
+                  byte uid_length = mfrc522[cc].uid.size;
+                  char uid[uid_length] = {0};
                   for (byte i = 0; i < mfrc522[cc].uid.size; i++) {
                     Serial.print(mfrc522[cc].uid.uidByte[i] < 0x10 ? " 0" : " ");
                     Serial.print(mfrc522[cc].uid.uidByte[i], HEX);
-                    server.print(mfrc522[cc].uid.uidByte[i] < 0x10 ? " 0" : " ");
-                    server.print(mfrc522[cc].uid.uidByte[i], HEX);
-                  } 
+                    uid[i] = mfrc522[cc].uid.uidByte[i];
+                  }
                   Serial.println();
+                  client.write(uid,uid_length);
+                  client.flush();//Wait for value to be sent
                   // Show the whole sector as it currently is
                   Serial.println(F("Current data in Tag:"));
                   mfrc522[cc].PICC_DumpMifareUltralightToSerial();
+                  byte ultralightData[64];
+                  mfrc522[cc].PICC_DumpMifareUltralightToBuffer(ultralightData);
+                  client.write(ultralightData,64); //Write over ethernet the content of the tag
+                  client.flush();
                   Serial.println();
                   data = client.read();//read next byte
-                  if(data == 0xFF){ //Will perform a write on the tag
+                  if(data == 0xFF){ //If a write is requested
                     byte pageAddr      = 2;
                     byte dataBlock[] = {0x00,0x00,0x00,0x00};
                     byte buffer[18];
@@ -229,7 +236,7 @@ void loop()
                         dataBlock[i] = client.read();
                       }
                       dump_byte_array(dataBlock, 4); Serial.println();
-                      dump_byte_array_eth(buffer,4);
+                      //dump_byte_array_eth(buffer,4,client);
                       status = (MFRC522_I2C::StatusCode) mfrc522[cc].MIFARE_Ultralight_Write(pageAddr, dataBlock, 4);
                       if (status != MFRC522_I2C::STATUS_OK) {
                           Serial.print(F("MIFARE_Write() failed: "));
@@ -247,7 +254,7 @@ void loop()
                       }
                       Serial.print(F("Data in page ")); Serial.print(pageAddr); Serial.println(F(":"));
                       dump_byte_array(buffer, 4); Serial.println();
-                      dump_byte_array_eth(buffer,4);
+                      //dump_byte_array_eth(buffer,4, client);
                       // Check that data in block is what we have written
                       // by counting the number of bytes that are equal
                       byte count = 0;
@@ -262,10 +269,15 @@ void loop()
                     }
                     if(success == 3){
                       Serial.println("Tag successfully updated");
-                      server.print("Tag has been updated");
+                      if(client.connected()){
+                      client.print("Tag updated");
+                      client.flush();
+                      }
+                      else Serial.println("Client no longer available");
                     }
                     else{
-                      server.print("Error writing on the tag");
+                      client.print("Error writing on the tag");
+                      client.flush();
                     }
                   }
                   mfrc522[cc].PCD_StopCrypto1();
@@ -275,14 +287,14 @@ void loop()
             }
           }
           else{
-            server.print("No RFID connected");
+            client.print("No RFID connected");
           }
         }       
-      } 
-    }     
-    client.stop(); 
+      }
+      client.stop();
+    }
   }
-  server.print("I am alive and well");
-  digitalWrite(LEDG,LOW);
-  delay(50);
+  //client.print("I am alive and well");
+  digitalWrite(LEDB,LOW);
+  delay(100);
 }

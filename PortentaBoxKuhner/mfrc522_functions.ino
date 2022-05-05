@@ -8,11 +8,13 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
     }
 }
 
-void dump_byte_array_eth(byte *buffer, byte bufferSize) {
-    for (byte i = 0; i < bufferSize; i++) {
-        server.print(buffer[i] < 0x10 ? " 0" : " ");
-        server.print(buffer[i], HEX);
-    } 
+void dump_byte_array_eth(byte *buffer, byte bufferSize, EthernetClient client) {
+//    for (byte i = 0; i < bufferSize; i++) {
+//        client.print(buffer[i] < 0x10 ? " 0" : " ");
+//        client.print(buffer[i], HEX);
+//    }
+    client.write(buffer,bufferSize);
+    client.flush();
 }
 void ShowReaderDetails(int cc) {
   // Get the mfrc522[ac][ac] software version
