@@ -166,13 +166,14 @@ void setup()
 void loop()
 {
   digitalWrite(LEDB,HIGH);
+  delay(100);
   //Check that toggle0 and toggle1 are enabled to desactivate the corresponding SSRs
   if(!toggle0) disable_SSR(0);
   if(!toggle1) disable_SSR(4);
    // listen for incoming clients
   EthernetClient client = server.available();
   if (client) { //Check that server.available returned a client
-    while (client.connected()) { //Stay in the loop for as long as the client wants
+    while(client.connected()) { //Stay in the loop for as long as the client wants
       if(client.available()){ //Returns true if there is still data to read
         byte data = client.read(); //read the first byte of data -> should be 0x00 or 0xff
         if(data == 0X00){
@@ -183,10 +184,12 @@ void loop()
             enable_SSR(data);
             client.print("Enabled the SSR ");client.println(data);
             client.flush();
+            client.stop();
           }
           else{
             client.println("No PCF connected");
             client.flush();
+            client.stop();
           }
         }
         else if(data == 0xFF){
@@ -216,9 +219,9 @@ void loop()
                   // Show the whole sector as it currently is
                   Serial.println(F("Current data in Tag:"));
                   mfrc522[cc].PICC_DumpMifareUltralightToSerial();
-                  byte ultralightData[64];
+                  byte ultralightData[176];
                   mfrc522[cc].PICC_DumpMifareUltralightToBuffer(ultralightData);
-                  client.write(ultralightData,64); //Write over ethernet the content of the tag
+                  client.write(ultralightData,176); //Write over ethernet the content of the tag
                   client.flush();
                   Serial.println();
                   data = client.read();//read next byte
@@ -269,32 +272,42 @@ void loop()
                     }
                     if(success == 3){
                       Serial.println("Tag successfully updated");
-                      if(client.connected()){
                       client.print("Tag updated");
                       client.flush();
-                      }
-                      else Serial.println("Client no longer available");
+                      client.stop();
                     }
                     else{
                       client.print("Error writing on the tag");
                       client.flush();
+                      client.stop();
                     }
                   }
                   mfrc522[cc].PCD_StopCrypto1();
                   mfrc522[cc].PCD_WriteRegister(0x01,0x10);//Soft Power Down
                 }
-                else{Serial.println("No tag found");}
+                else{
+                  Serial.println("No tag found");
+                  client.stop();
+                }
+            }
+            else{
+              Serial.println("Not enough chip connected");
+              client.stop();
             }
           }
           else{
             client.print("No RFID connected");
+            client.stop();
           }
-        }       
+        }
+        else{
+          client.print("Me not understand");
+          client.stop();       
+        }
       }
-      client.stop();
     }
   }
-  //client.print("I am alive and well");
+  client.stop();
   digitalWrite(LEDB,LOW);
   delay(100);
 }
