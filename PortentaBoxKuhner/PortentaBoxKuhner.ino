@@ -103,7 +103,7 @@ EthernetServer server = EthernetServer(52);  // (port 80 is default for HTTP) 52
 void setup()
 {
   Serial.begin(baud);
-  while(!Serial);//Wait for the user to open the serial terminal
+  //while(!Serial);//Wait for the user to open the serial terminal
   digitalWrite(LEDG,LON);
   pinMode(RST_PIN,OUTPUT);
   digitalWrite(RST_PIN,LOW);
@@ -176,15 +176,22 @@ void loop()
     while(client.connected()) { //Stay in the loop for as long as the client wants
       if(client.available()){ //Returns true if there is still data to read
         byte data = client.read(); //read the first byte of data -> should be 0x00 or 0xff
-        if(data == 0X00){
+        if(data == 'S'){ //data == 'S' //Check that first letter is S for SSR
           //Command for the PCF8575
           if(pcf){//Check that a pcf8575 is connected to the I2C bus
-            data = client.read();
-            Serial.print("Received data : ");Serial.println(data,HEX); 
-            enable_SSR(data);
-            client.print("Enabled the SSR ");client.println(data);
-            client.flush();
-            client.stop();
+            data = client.read()-'0'; //Second char is a number and represents which SSR should be used
+            if(data >= 0 && data <8){
+              Serial.print("Received data : ");Serial.println(data,HEX); 
+              enable_SSR(data);
+              client.print("Enabled the SSR ");client.print(data);client.println(" for 10 seconds");
+              client.flush();
+              client.stop();
+            }
+            else{
+              client.println("SSR should be 0-7");
+              client.flush();
+              client.stop();
+            }
           }
           else{
             client.println("No PCF connected");
@@ -192,12 +199,12 @@ void loop()
             client.stop();
           }
         }
-        else if(data == 0xFF){
+        else if(data == 'R'){ //data == 'R' check that first byte of data is R for RFID
           //Command for the RFID
           Serial.println("RFID instr. received.");
           if(rfid){//Check that a mfrc522 chip is connected
-            cc = client.read(); //Read second byte -> choose the mfrc522 chip (Starts at 0)
-            if(cc<nRFID){ //Check that the chip selected is in range
+            cc = client.read()-'0'; //Read second byte -> choose the mfrc522 chip (Starts at 0)
+            if(cc<nRFID && cc>=0){ //Check that the chip selected is in range & a valid value
               Serial.print("Chip ");Serial.print(cc);Serial.println(" selected");
               client.print("I2C address of selected chip"); client.println(mfrc522[cc].PCD_getAddress());
               client.flush();
@@ -223,9 +230,9 @@ void loop()
                   mfrc522[cc].PICC_DumpMifareUltralightToBuffer(ultralightData);
                   client.write(ultralightData,176); //Write over ethernet the content of the tag
                   client.flush();
-                  Serial.println();
+                  Serial.println("Data sent to Client");
                   data = client.read();//read next byte
-                  if(data == 0xFF){ //If a write is requested
+                  if(data == 'W'){ //If a write is requested
                     byte pageAddr      = 2;
                     byte dataBlock[] = {0x00,0x00,0x00,0x00};
                     byte buffer[18];
@@ -304,9 +311,12 @@ void loop()
           client.print("Me not understand");
           client.stop();       
         }
+        client.stop();
       }
+      //client.print("End");
     }
   }
+  //client.print("End");
   client.stop();
   digitalWrite(LEDB,LOW);
   delay(100);
