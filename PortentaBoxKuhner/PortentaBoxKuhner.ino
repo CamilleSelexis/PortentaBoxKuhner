@@ -24,8 +24,8 @@ using namespace rtos;
 volatile bool toggle0 = true;
 volatile bool toggle1 = true;
 
-#define TIMER0_INTERVAL_MS        5000
-#define TIMER1_INTERVAL_MS        5000
+#define TIMER0_INTERVAL_MS        10000
+#define TIMER1_INTERVAL_MS        10000
 
 // Init timer TIM15
 Portenta_H7_Timer ITimer0(TIM15);
@@ -294,11 +294,13 @@ void loop()
                 }
                 else{
                   Serial.println("No tag found");
+                  client.println("No tag found");
                   client.stop();
                 }
             }
             else{
               Serial.println("Not enough chip connected");
+              client.println("Not enough chip connected");
               client.stop();
             }
           }
