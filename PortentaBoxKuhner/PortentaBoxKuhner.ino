@@ -32,6 +32,17 @@ Portenta_H7_Timer ITimer0(TIM15);
 // Init  timer TIM16
 Portenta_H7_Timer ITimer1(TIM16);
 
+//reset function -- Call it to reset the arduino
+void resetFunc(void) {
+  unsigned long *registerAddr;
+  registerAddr = (unsigned long *)0xE000ED0C; //Writes to the AIRCR register of the stm32h747 to software restet the arduino
+  //It is a 32 bit register set bit 2 to request a reset
+  //See Arm® v7-M Architecture Reference Manual for more information
+  Serial.println(*registerAddr);
+  *registerAddr = *registerAddr | (unsigned long) 0x00000001;
+  Serial.println(*registerAddr);
+}
+
 MFRC522_I2C mfrc522[40] = { // Create the structure for up to 40 rfid chips
   MFRC522_I2C(0x00,RST_PIN),
   MFRC522_I2C(0x00,RST_PIN),
@@ -176,10 +187,10 @@ void loop()
     while(client.connected()) { //Stay in the loop for as long as the client wants
       if(client.available()){ //Returns true if there is still data to read
         byte data = client.read(); //read the first byte of data -> should be 0x00 or 0xff
-        if(data == 'S'){ //data == 'S' //Check that first letter is S for SSR
+        if(data == 'P'){ //data == 'S' //Check that first letter is P for PCF
           //Command for the PCF8575
           if(pcf){//Check that a pcf8575 is connected to the I2C bus
-            data = client.read()-'0'; //Second char is a number and represents which SSR should be used
+            data = client.read()- '0'; //Second char is a number and represents which SSR should be used
             if(data >= 0 && data <8){
               Serial.print("Received data : ");Serial.println(data,HEX); 
               enable_SSR(data);
@@ -199,11 +210,12 @@ void loop()
             client.stop();
           }
         }
-        else if(data == 'R'){ //data == 'R' check that first byte of data is R for RFID
+        else if(data == 'M'){ //data == 'M' check that first byte of data is M for MFRC
           //Command for the RFID
           Serial.println("RFID instr. received.");
           if(rfid){//Check that a mfrc522 chip is connected
             cc = client.read()-'0'; //Read second byte -> choose the mfrc522 chip (Starts at 0)
+            Serial.println(cc);
             if(cc<nRFID && cc>=0){ //Check that the chip selected is in range & a valid value
               Serial.print("Chip ");Serial.print(cc);Serial.println(" selected");
               client.print("I2C address of selected chip"); client.println(mfrc522[cc].PCD_getAddress());
@@ -308,6 +320,20 @@ void loop()
             client.print("No RFID connected");
             client.stop();
           }
+        }
+        else if(data == 'R'){ //Check that the first letter = B for boot
+          //Reset the portenta
+          Serial.println("I will reset, wish me luck");
+          client.print("The portenta will reset, please wait a few seconds, (this is not a true reset)");
+          client.flush();
+          client.stop();
+          reset();
+          //resetFunc();
+        }
+        else if(data == 'S'){ //Give status of the portenta
+          Serial.println("Status cmd received");
+          client.print("I have ");client.print(pcf ? 1 : 0);client.print(" pcf connected");
+          client.print("I have ");client.print(nRFID);client.print(" RFID chip conected");
         }
         else{
           client.print("Me not understand");
