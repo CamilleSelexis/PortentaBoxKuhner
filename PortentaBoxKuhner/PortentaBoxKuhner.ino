@@ -107,7 +107,7 @@ PCF8575 pcf8575(adr_pcf);
  //Ethernet related ---------------------
 byte mac[] = {0xDE, 0x03, 0x33, 0x13, 0x59, 0x99};  //Mac adress
 
-IPAddress ip(10,0,16,11);   //Adresse IP
+IPAddress ip(192,168,0,2);   //Adresse IP
 
 EthernetServer server = EthernetServer(52);  // (port 80 is default for HTTP) 52 is the number of the lab
 
@@ -181,6 +181,7 @@ void loop()
   //Check that toggle0 and toggle1 are enabled to desactivate the corresponding SSRs
   if(!toggle0) disable_SSR(0);
   if(!toggle1) disable_SSR(4);
+  server.print("Hello everyone");
    // listen for incoming clients
   EthernetClient client = server.available();
   if (client) { //Check that server.available returned a client
