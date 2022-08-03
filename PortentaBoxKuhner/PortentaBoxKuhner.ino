@@ -36,11 +36,9 @@ Portenta_H7_Timer ITimer1(TIM16);
 void resetFunc(void) {
   unsigned long *registerAddr;
   registerAddr = (unsigned long *)0xE000ED0C; //Writes to the AIRCR register of the stm32h747 to software restet the arduino
-  //It is a 32 bit register set bit 2 to request a reset
+  //It is a 32 bit register set bit 2 to request a reset and write 0x05FA to enable the write
   //See Arm® v7-M Architecture Reference Manual for more information
-  Serial.println(*registerAddr);
-  *registerAddr = *registerAddr | (unsigned long) 0x00000001;
-  Serial.println(*registerAddr);
+  *registerAddr = (unsigned long) 0x05FA0304;
 }
 
 MFRC522_I2C mfrc522[40] = { // Create the structure for up to 40 rfid chips
@@ -328,8 +326,8 @@ void loop()
           client.print("The portenta will reset, please wait a few seconds, (this is not a true reset)");
           client.flush();
           client.stop();
-          reset();
-          //resetFunc();
+          //reset();
+          resetFunc();
         }
         else if(data == 'S'){ //Give status of the portenta
           Serial.println("Status cmd received");
